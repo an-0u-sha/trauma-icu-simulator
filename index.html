@@ -63,6 +63,13 @@ button{font:500 13px var(--sans);border:1px solid var(--line);background:var(--s
 button:hover{background:var(--surf2);border-color:var(--ink3)}
 button.go{background:var(--s1);border-color:var(--s1);color:#fff;min-width:84px}
 button.go:hover{filter:brightness(1.08)}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;
+ background:var(--sunk)}
+.seg button{border:0;border-right:1px solid var(--line);border-radius:0;padding:6px 9px;
+ font:500 12px var(--mono);background:transparent;min-width:40px;color:var(--ink2)}
+.seg button:last-child{border-right:0}
+.seg button:hover{background:var(--surf2)}
+.seg button.on{background:var(--s1);color:#fff}
 
 /* ---------- cards ---------- */
 .card{background:var(--surf);border:1px solid var(--line);border-radius:var(--r);
@@ -196,11 +203,11 @@ details[open] .csum .lab::after{transform:rotate(90deg)}
     <div class="f"><label>Triage</label><select id="tri">
       <option value="fcfs">Longest wait first</option>
       <option value="sev" disabled>Sickest first — v2</option></select></div>
-    <div class="f"><label>Speed</label><select id="spd">
-      <option value="1100">1 day ≈ 3 s</option>
-      <option value="500" selected>1 day ≈ 1.5 s</option>
-      <option value="160">1 day ≈ 0.5 s</option>
-      <option value="20">as fast as possible</option></select></div>
+    <div class="f"><label>Speed <span id="sps" style="text-transform:none;letter-spacing:0">1 day ≈ 2.4 s</span></label>
+      <div class="seg" id="spd">
+        <button data-m="1" class="on">1×</button><button data-m="2">2×</button>
+        <button data-m="4">4×</button><button data-m="8">8×</button>
+        <button data-m="20">20×</button></div></div>
     <button class="go" id="run">Run</button>
     <button id="step">Step 8 h</button>
     <button id="fwd">+30 days</button>
@@ -355,7 +362,7 @@ function synth(n){
 
 // ---------------------------------------------------------------- state
 const $ = id => document.getElementById(id);
-let S, timer=null, hist=[];
+let S, timer=null, hist=[], MULT=1; const BASE=800;   // ms per 8-h block at 1x
 const cfg = () => ({lam:+$("lam").value, beds:+$("beds").value, nur:+$("nur").value,
                     doc:+$("doc").value, vents:+$("vent").value, mons:+$("mon").value});
 
@@ -563,9 +570,16 @@ function stop(){ if(timer){clearInterval(timer); timer=null; $("run").textConten
 $("run").onclick = () => {
   if(timer) return stop();
   $("run").textContent="Pause";
-  timer = setInterval(()=>{ tick(); render(); }, +$("spd").value);
+  timer = setInterval(()=>{ tick(); render(); }, BASE/MULT);
 };
-$("spd").onchange = () => { if(timer){ stop(); $("run").click(); } };
+$("spd").querySelectorAll("button").forEach(b=>{
+  b.onclick = () => {
+    MULT = +b.dataset.m;
+    $("spd").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b));
+    $("sps").textContent = "1 day ≈ " + (BASE*3/MULT/1000).toFixed(1) + " s";
+    if(timer){ stop(); $("run").click(); }
+  };
+});
 $("step").onclick = () => { tick(); render(); };
 $("fwd").onclick  = () => { for(let i=0;i<90;i++) tick(); render(); };
 $("rst").onclick  = () => { stop(); reset(); };
