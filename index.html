@@ -1,0 +1,585 @@
+<title>Trauma ICU Simulator</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+ --bg:#f4f3f0; --surf:#fff; --surf2:#faf9f6; --sunk:#efede8;
+ --ink:#16181c; --ink2:#53585f; --ink3:#8b9099;
+ --line:#e0ddd6; --line2:#edeae4;
+ --s1:#2563c7; --s2:#c0541c; --s3:#0f7a63; --crit:#c9342f; --warn:#a9770a;
+ --s1b:#e8f0fb; --critb:#fbeceb; --warnb:#faf2e0;
+ --sans:'IBM Plex Sans',ui-sans-serif,system-ui,sans-serif;
+ --mono:'IBM Plex Mono',ui-monospace,monospace;
+ --r:11px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --bg:#101216; --surf:#191c21; --surf2:#1f232a; --sunk:#14171b;
+ --ink:#ecebe7; --ink2:#aab0b8; --ink3:#777d86;
+ --line:#2b2f36; --line2:#23272d;
+ --s1:#5c9bf0; --s2:#ef8a51; --s3:#36c2a0; --crit:#e8635f; --warn:#d6a33c;
+ --s1b:#15202e; --critb:#2a1817; --warnb:#271f12; color-scheme:dark;}}
+:root[data-theme="dark"]{
+ --bg:#101216; --surf:#191c21; --surf2:#1f232a; --sunk:#14171b;
+ --ink:#ecebe7; --ink2:#aab0b8; --ink3:#777d86;
+ --line:#2b2f36; --line2:#23272d;
+ --s1:#5c9bf0; --s2:#ef8a51; --s3:#36c2a0; --crit:#e8635f; --warn:#d6a33c;
+ --s1b:#15202e; --critb:#2a1817; --warnb:#271f12; color-scheme:dark;}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 14px/1.55 var(--sans);margin:0;
+ -webkit-font-smoothing:antialiased}
+.wrap{max-width:1560px;margin:0 auto;padding-block:26px 56px;padding-left:22px;padding-right:22px}
+
+/* ---------- header ---------- */
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;
+ flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:22px;font-weight:600;margin:0;letter-spacing:-.018em}
+.sub{color:var(--ink3);font-size:12.5px;margin:4px 0 0;max-width:62ch}
+.clock{display:flex;gap:0;background:var(--surf);border:1px solid var(--line);
+ border-radius:var(--r);overflow:hidden}
+.clock div{padding:9px 17px;border-right:1px solid var(--line2);min-width:96px}
+.clock div:last-child{border-right:0}
+.clock .l{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;
+ color:var(--ink3)}
+.clock .v{font:600 17px var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+ margin-top:1px}
+.clock .v.q{color:var(--warn)} .clock .v.qq{color:var(--crit)}
+
+/* ---------- controls ---------- */
+.bar2{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;margin-bottom:18px}
+.grp{display:flex;gap:9px;align-items:flex-end;background:var(--surf);
+ border:1px solid var(--line);border-radius:var(--r);padding:9px 13px 10px}
+.grp .gl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;
+ color:var(--ink3);writing-mode:vertical-rl;transform:rotate(180deg);
+ padding:2px 0;margin-right:2px;align-self:stretch;display:flex;align-items:center}
+.f{display:flex;flex-direction:column;gap:4px}
+.f label{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);
+ font-weight:600}
+.f input,.f select{font:500 13px var(--mono);background:var(--sunk);color:var(--ink);
+ border:1px solid var(--line);border-radius:7px;padding:6px 9px;width:74px}
+.f select{width:auto;min-width:112px;font-family:var(--sans)}
+.f input:focus,.f select:focus{outline:2px solid var(--s1);outline-offset:-1px}
+button{font:500 13px var(--sans);border:1px solid var(--line);background:var(--sunk);
+ color:var(--ink);border-radius:7px;padding:7px 15px;cursor:pointer;white-space:nowrap}
+button:hover{background:var(--surf2);border-color:var(--ink3)}
+button.go{background:var(--s1);border-color:var(--s1);color:#fff;min-width:84px}
+button.go:hover{filter:brightness(1.08)}
+
+/* ---------- cards ---------- */
+.card{background:var(--surf);border:1px solid var(--line);border-radius:var(--r);
+ padding:16px 17px}
+h2{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;
+ color:var(--ink3);margin:0 0 13px;display:flex;justify-content:space-between;
+ align-items:baseline;gap:10px}
+h2 .r{font:500 11px var(--mono);color:var(--ink2);text-transform:none;letter-spacing:0}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 352px;gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}}
+@media(max-width:700px){.pair{grid-template-columns:1fr}}
+
+/* ---------- stats ---------- */
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line2);
+ border:1px solid var(--line2);border-radius:9px;overflow:hidden;margin-bottom:13px}
+.hero > div{background:var(--surf);padding:13px 14px}
+.hero .l{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;
+ color:var(--ink3)}
+.hero .v{font:600 28px var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.03em;
+ line-height:1.15;margin-top:3px}
+.hero .n{font-size:11px;color:var(--ink3);font-family:var(--mono)}
+.hero .v.bad{color:var(--crit)}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:9px 16px}
+.mini div{display:flex;justify-content:space-between;align-items:baseline;
+ border-bottom:1px solid var(--line2);padding-bottom:5px}
+.mini span{font-size:12px;color:var(--ink2)}
+.mini b{font:500 13px var(--mono);font-variant-numeric:tabular-nums}
+
+/* ---------- bars ---------- */
+.bar{margin-bottom:11px}
+.bar:last-child{margin-bottom:0}
+.bar .row{display:flex;justify-content:space-between;align-items:baseline;
+ font-size:12.5px;margin-bottom:4px;color:var(--ink2)}
+.bar .row b{font:500 12.5px var(--mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+.track{height:6px;background:var(--sunk);border-radius:4px;overflow:hidden}
+.fill{height:100%;border-radius:4px;background:var(--s1);transition:width .25s ease}
+.fill.hi{background:var(--warn)} .fill.max{background:var(--crit)}
+input[type=range]{width:100%;accent-color:var(--s1);margin-top:2px}
+
+/* ---------- beds ---------- */
+.beds{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px}
+.bed{aspect-ratio:1;border:1px solid var(--line);border-radius:8px;display:flex;
+ flex-direction:column;align-items:center;justify-content:center;gap:2px;
+ background:var(--sunk);color:var(--ink3);font-family:var(--mono)}
+.bed.on{background:var(--s1b);border-color:transparent;color:var(--s1);
+ box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--s1) 35%,transparent)}
+.bed.on.v{background:var(--warnb);color:var(--warn);
+ box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 38%,transparent)}
+.bed .id{font-size:11.5px;font-weight:600;letter-spacing:-.02em}
+.bed .d{font-size:9px;letter-spacing:.02em;opacity:.85}
+.bed .f{font-size:9px;letter-spacing:.06em}
+
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;
+ color:var(--ink3);font-weight:600;padding:0 10px 7px 0;border-bottom:1px solid var(--line)}
+td{padding:6px 10px 6px 0;border-bottom:1px solid var(--line2);font-family:var(--mono);
+ font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--ink2)}
+td.n{font-family:var(--sans);font-size:12.5px;color:var(--ink)}
+td.w{color:var(--crit);font-weight:500}
+tbody tr:last-child td{border-bottom:0}
+.scroll{max-height:250px;overflow-y:auto;margin:-2px -4px 0 0;padding-right:4px}
+.empty{color:var(--ink3);font-size:12px;padding:26px 0;text-align:center}
+
+/* ---------- misc ---------- */
+.charts > div{margin-bottom:14px}
+.charts > div:last-child{margin-bottom:0}
+.ct{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;
+ color:var(--ink3);margin-bottom:5px}
+canvas{display:block;width:100%;height:auto}
+#log{font:400 11.5px/1.8 var(--mono);color:var(--ink2);max-height:250px;overflow-y:auto}
+#log b{color:var(--ink3);font-weight:500;margin-right:5px}
+#log .d{color:var(--crit)}
+details summary{cursor:pointer;list-style:none;display:block}
+details summary::-webkit-details-marker{display:none}
+.csum{display:flex;justify-content:space-between;align-items:baseline}
+.csum .lab{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;
+ color:var(--ink3)}
+.csum .lab::after{content:"▸";margin-left:7px;display:inline-block;transition:transform .18s}
+details[open] .csum .lab::after{transform:rotate(90deg)}
+.csum .tot{font:600 22px var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.tag{font:600 9px var(--mono);padding:2px 6px;border-radius:4px;letter-spacing:.06em;
+ text-transform:uppercase;white-space:nowrap}
+.t-m{background:var(--s1b);color:var(--s1)}
+.t-s{background:var(--line2);color:var(--ink2)}
+.t-a{background:var(--critb);color:var(--crit)}
+.note{font-size:11.5px;color:var(--ink3);margin:11px 0 0;line-height:1.6}
+.prov{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0 28px}
+.prov .r{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+ padding:8px 0;border-bottom:1px solid var(--line2)}
+.prov .r .a{font-size:12.5px;flex:0 0 auto}
+.prov .r .b{font:400 11px var(--mono);color:var(--ink3);text-align:right;flex:1 1 auto}
+.vrow{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;
+ border-bottom:1px solid var(--line2);font-size:12.5px;color:var(--ink2)}
+.vrow:last-child{border-bottom:0}
+.vrow b{font:500 12.5px var(--mono);color:var(--ink)}
+.vrow b.ok{color:var(--s3)} .vrow b.off{color:var(--warn)}
+</style>
+
+<div class="wrap">
+
+<div class="top">
+  <div>
+    <h1>Trauma ICU Simulator</h1>
+    <p class="sub">MIMIC-IV v3.1 Trauma SICU. Real patient journeys replayed under finite
+    beds, staff and devices. Every figure below is labelled by where it came from.</p>
+  </div>
+  <div class="clock">
+    <div><div class="l">Day</div><div class="v" id="kday">0.0</div></div>
+    <div><div class="l">Shift</div><div class="v" id="kshift">day</div></div>
+    <div><div class="l">Beds used</div><div class="v" id="kocc">0/0</div></div>
+    <div><div class="l">Waiting</div><div class="v" id="kq">0</div></div>
+  </div>
+</div>
+
+<div class="bar2">
+  <div class="grp"><span class="gl">Demand</span>
+    <div class="f"><label>Admits / day</label><input id="lam" type="number" value="3.9" step="0.1" min="0.2"></div>
+  </div>
+  <div class="grp"><span class="gl">Capacity</span>
+    <div class="f"><label>Beds</label><input id="beds" type="number" value="16" min="1"></div>
+    <div class="f"><label>Nurses</label><input id="nur" type="number" value="10" min="1"></div>
+    <div class="f"><label>Doctors</label><input id="doc" type="number" value="3" min="1"></div>
+    <div class="f"><label>Vents</label><input id="vent" type="number" value="8" min="0"></div>
+    <div class="f"><label>Art. lines</label><input id="mon" type="number" value="8" min="0"></div>
+  </div>
+  <div class="grp"><span class="gl">Run</span>
+    <div class="f"><label>Triage</label><select id="tri">
+      <option value="fcfs">Longest wait first</option>
+      <option value="sev" disabled>Sickest first — v2</option></select></div>
+    <div class="f"><label>Speed</label><select id="spd">
+      <option value="1100">1 day ≈ 3 s</option>
+      <option value="500" selected>1 day ≈ 1.5 s</option>
+      <option value="160">1 day ≈ 0.5 s</option>
+      <option value="20">as fast as possible</option></select></div>
+    <button class="go" id="run">Run</button>
+    <button id="step">Step 8 h</button>
+    <button id="fwd">+30 days</button>
+    <button id="rst">Reset</button>
+    <button id="loadbtn" type="button">Load cohort.json</button>
+    <input id="file" type="file" accept=".json" style="display:none">
+  </div>
+</div>
+
+<div class="grid">
+  <div class="col">
+    <div class="card">
+      <h2>Bed occupancy <span class="r" id="occtxt"></span></h2>
+      <div class="beds" id="bedgrid"></div>
+      <p class="note">Amber marks a patient on a ventilator. Each tile shows days in the unit.</p>
+    </div>
+
+    <div class="card charts">
+      <h2>Over time</h2>
+      <div><div class="ct">Occupancy and queue</div><canvas id="c1" width="860" height="128"></canvas></div>
+      <div><div class="ct">Staffing adequacy, % of need met</div><canvas id="c2" width="860" height="112"></canvas></div>
+      <div><div class="ct">Cumulative deaths</div><canvas id="c3" width="860" height="112"></canvas></div>
+    </div>
+
+    <div class="pair">
+      <div class="card">
+        <h2>Waiting for a bed</h2>
+        <div class="scroll"><table><thead><tr><th>Patient</th><th>Waited</th><th>Vent</th></tr></thead>
+        <tbody id="qt"></tbody></table><div class="empty" id="qe">nobody waiting</div></div>
+      </div>
+      <div class="card">
+        <h2>Event log</h2>
+        <div id="log"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Patients in beds</h2>
+      <div class="scroll"><table><thead><tr><th>Patient</th><th>Bed</th><th>Block</th>
+      <th>Days</th><th>Vent</th><th>Line</th><th>Nurse load</th></tr></thead>
+      <tbody id="pt"></tbody></table><div class="empty" id="pe">unit empty</div></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card">
+      <h2>Outcomes</h2>
+      <div class="hero" id="hero"></div>
+      <div class="mini" id="mini"></div>
+    </div>
+
+    <div class="card">
+      <h2>Resource use <span class="r">this block</span></h2>
+      <div id="bars"></div>
+    </div>
+
+    <div class="card">
+      <details id="costbox"><summary class="csum"><span class="lab">Cost</span>
+      <span class="tot" id="ctot">₹0</span></summary>
+      <p class="note" style="margin:3px 0 10px">per patient <b id="cpp">₹0</b>
+      &nbsp;<span class="tag t-a">assumed</span></p>
+      <table><tbody id="ctab"></tbody></table></details>
+    </div>
+
+    <div class="card">
+      <h2>Validation</h2>
+      <div id="valid"></div>
+      <p class="note">With capacity unlimited the simulator must reproduce the cohort it was
+      built from. Set beds and staff very high and run 200+ days to check.</p>
+    </div>
+
+    <div class="card">
+      <h2>Harm constants <span class="tag t-a">assumed</span></h2>
+      <div id="kappas"></div>
+      <p class="note">No record shows what shortage does to a patient, because this hospital
+      was rarely short. These three numbers carry that assumption and every result inherits
+      them. They stand in for the health model until SOFA is extracted.</p>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>Where every number comes from</h2>
+  <div class="prov" id="prov"></div>
+</div>
+
+</div>
+
+<script>
+// ---------------------------------------------------------------- parameters
+const P = {              // measured from MIMIC-IV v3.1 Trauma SICU unless noted
+  c_bar: 468.31, o_bar: 7.49, l_bar: 18.85,
+  p_vent: 0.441, p_line: 0.426,
+  mean_los: 3.646, icu_mort: 0.0743,
+  readmit: 0.0669, gap: 6,
+  nurse_ratio: 1.39, doctor_ratio: 8.0,
+  w: [1.068,1.109,.994,.797,.935,.841,.852,.614,.669,.619,.733,.738,
+      .859,.788,1.011,1.088,1.288,1.450,1.437,1.171,1.361,1.308,1.141,1.127]
+};
+const SUM = a => a.reduce((x,y)=>x+y,0);
+const SHIFT_W = [SUM(P.w.slice(7,15)), SUM(P.w.slice(15,23)), P.w[23]+SUM(P.w.slice(0,7))];
+const SHIFT = ["day","eve","night"];
+const COST = {nurse:2500, doctor:6000, bed:400, vent:300};   // INR per 8-h block, assumed
+let K = {staff:0.004, queue:0.010, vent:0.020};              // assumed
+
+const PROV = [
+ ["Arrival clock wₕ","day 25% · eve 43% · night 32%","m"],
+ ["Length of stay","mean 3.65 d · median 1.90 d","m"],
+ ["Charting per block c̄","468 entries","m"],
+ ["Orders per block ō","7.5 new orders","m"],
+ ["Labs per block","18.9 results","m"],
+ ["Ventilated blocks","44.1%","m"],
+ ["Arterial-line blocks","42.6%","m"],
+ ["ICU mortality","7.4%","m"],
+ ["Readmission to TSICU","6.7%, median 4 blocks","m"],
+ ["Admits per day","swept — date shift makes it unmeasurable","s"],
+ ["Nurse : patient","1 : 1.39, ISCCM weighted by vent rate","s"],
+ ["Doctor : patient","1 : 8","s"],
+ ["Bed, staff, device counts","swept","s"],
+ ["Cost per block","₹400 bed · ₹2,500 nurse · ₹6,000 doctor","a"],
+ ["Harm constants κ","no data source exists","a"],
+];
+
+// ---------------------------------------------------------------- cohort
+let COHORT = null, SOURCE = "synthetic, matched to measured distributions";
+function gauss(){return Math.sqrt(-2*Math.log(Math.random()))*Math.cos(2*Math.PI*Math.random());}
+function poisson(lam){ if(lam<=0)return 0; const L=Math.exp(-lam); let k=0,p=1;
+  do{k++;p*=Math.random();}while(p>L); return k-1; }
+
+function synth(n){
+  const by = {day:[],eve:[],night:[]}, share = SHIFT_W.map(x=>x/24);
+  for(let i=0;i<n;i++){
+    const r = Math.random();
+    const sh = r<share[0] ? "day" : r<share[0]+share[1] ? "eve" : "night";
+    const los = Math.exp(Math.log(1.90) + 1.02*gauss());
+    const nb = Math.max(1, Math.ceil(los*3));
+    const c=[],o=[],l=[],v=[],m=[], sick=Math.random();
+    for(let k=0;k<nb;k++){
+      c.push(Math.max(0, Math.round(468 + 150*gauss())));
+      o.push(Math.max(0, Math.round(-7.49*Math.log(Math.random()))));
+      l.push(Math.random()<0.36 ? 0 : Math.max(0, Math.round(26 + 12*gauss())));
+      // profiles traced from the measured device-use curve: vent 34% -> 60%,
+      // line rising to 53% at block 22 then falling away
+      v.push(sick < 0.34 + 0.26*Math.min(1,k/20) ? 1 : 0);
+      m.push(Math.random() < (k<22 ? 0.34+0.19*k/22
+                                   : Math.max(.25, 0.53-0.28*(k-22)/70)) ? 1 : 0);
+    }
+    by[sh].push({s:sh, d: Math.random()<P.icu_mort?1:0, c,o,l,v,m, n:nb});
+  }
+  return by;
+}
+
+// ---------------------------------------------------------------- state
+const $ = id => document.getElementById(id);
+let S, timer=null, hist=[];
+const cfg = () => ({lam:+$("lam").value, beds:+$("beds").value, nur:+$("nur").value,
+                    doc:+$("doc").value, vents:+$("vent").value, mons:+$("mon").value});
+
+function reset(){
+  if(!COHORT) COHORT = synth(2000);
+  S = {t:0, ward:[], queue:[], pend:[], nid:0,
+       adm:0, deaths:0, qdeaths:0, disch:0, readm:0, qh:0, los:0, bedblocks:0,
+       cost:{nurse:0,doctor:0,bed:0,vent:0}, rN:1, rD:1, needN:0, needD:0,
+       vUse:0, mUse:0, log:[]};
+  hist = [];
+  say("Ready. Cohort: " + SOURCE);
+  render();
+}
+function say(s, bad){ S.log.unshift({d:(S.t/3).toFixed(1), s, bad});
+  if(S.log.length>150) S.log.pop(); }
+
+function tick(){
+  const C = cfg(), sh = S.t % 3;
+  for(let i=S.pend.length-1;i>=0;i--) if(S.pend[i].t<=S.t){ S.queue.push(S.pend[i].p); S.pend.splice(i,1); }
+  const a = poisson(C.lam * SHIFT_W[sh] / 24);
+  for(let i=0;i<a;i++){
+    const pool = COHORT[SHIFT[sh]];
+    S.queue.push({rec: pool[Math.floor(Math.random()*pool.length)],
+                  k:0, wait:0, id:++S.nid, vent:false, mon:false, unmetV:false});
+  }
+  S.queue.sort((x,y)=>y.wait-x.wait);
+  while(S.ward.length < C.beds && S.queue.length){
+    const p = S.queue.shift(); p.k=0; S.ward.push(p); S.adm++;
+    say("Patient "+p.id+" admitted"+(p.wait? " after "+(p.wait*8)+" h waiting":""));
+  }
+  S.vUse = S.mUse = 0;
+  for(const p of S.ward){
+    const i = Math.min(p.k, p.rec.n-1);
+    const nv = !!p.rec.v[i], nm = !!p.rec.m[i];
+    p.vent = nv && S.vUse < C.vents; if(p.vent) S.vUse++;
+    p.mon  = nm && S.mUse < C.mons;  if(p.mon)  S.mUse++;
+    p.unmetV = nv && !p.vent;
+  }
+  let ec=0, eo=0;
+  for(const p of S.ward){ const i=Math.min(p.k,p.rec.n-1); ec+=p.rec.c[i]; eo+=p.rec.o[i]; }
+  S.needN = (ec/P.c_bar)/P.nurse_ratio;
+  S.needD = (eo/P.o_bar)/P.doctor_ratio;
+  S.rN = S.needN>0 ? Math.min(1, C.nur/S.needN) : 1;
+  S.rD = S.needD>0 ? Math.min(1, C.doc/S.needD) : 1;
+  const short = (1-S.rN)+(1-S.rD);
+  for(let i=S.ward.length-1;i>=0;i--){
+    const p = S.ward[i], last = p.k >= p.rec.n-1;
+    const extra = K.staff*short + (p.unmetV ? K.vent : 0);
+    if((last && p.rec.d) || Math.random() < extra){
+      S.ward.splice(i,1); S.deaths++; S.los += p.k+1;
+      say("Patient "+p.id+" died in bed"+((last&&p.rec.d)?"":" — shortage"), true);
+    } else if(last){
+      S.ward.splice(i,1); S.disch++; S.los += p.k+1;
+      say("Patient "+p.id+" discharged after "+((p.k+1)/3).toFixed(1)+" d");
+      if(Math.random() < P.readmit){ S.readm++;
+        S.pend.push({t:S.t+P.gap, p:{rec:p.rec,k:0,wait:0,id:++S.nid,
+                     vent:false,mon:false,unmetV:false}});
+        say("Patient "+p.id+" will return in 2 days"); }
+    } else p.k++;
+  }
+  for(let i=S.queue.length-1;i>=0;i--){
+    const p=S.queue[i]; p.wait++; S.qh+=8;
+    if(Math.random() < Math.min(0.5, K.queue*p.wait)){
+      S.queue.splice(i,1); S.qdeaths++;
+      say("Patient "+p.id+" died waiting, "+(p.wait*8)+" h", true);
+    }
+  }
+  S.bedblocks += S.ward.length;
+  S.cost.nurse += C.nur*COST.nurse; S.cost.doctor += C.doc*COST.doctor;
+  S.cost.bed += S.ward.length*COST.bed; S.cost.vent += S.vUse*COST.vent;
+  hist.push({occ:S.ward.length, q:S.queue.length, rN:S.rN, rD:S.rD,
+             dead:S.deaths+S.qdeaths});
+  if(hist.length>600) hist.shift();
+  S.t++;
+}
+
+// ---------------------------------------------------------------- render
+const rs = n => n.toLocaleString("en-IN");
+function render(){
+  const C = cfg(), done = Math.max(S.deaths+S.disch,1);
+  const mort = 100*S.deaths/done, ls = S.los/done/3;
+
+  $("kday").textContent   = (S.t/3).toFixed(1);
+  $("kshift").textContent = SHIFT[S.t%3];
+  $("kocc").textContent   = S.ward.length+"/"+C.beds;
+  const kq = $("kq"); kq.textContent = S.queue.length;
+  kq.className = "v" + (S.queue.length>5 ? " qq" : S.queue.length ? " q" : "");
+
+  $("hero").innerHTML = [
+    ["Died in unit", S.deaths, mort.toFixed(1)+"% of completed", S.deaths>0],
+    ["Died waiting", S.qdeaths, S.qdeaths? "never happens in MIMIC":" ", S.qdeaths>0],
+    ["Discharged", S.disch, S.readm+" came back", false],
+    ["Mean stay", ls.toFixed(2)+" d", "cohort 3.65 d", false],
+  ].map(r=>`<div><div class="l">${r[0]}</div>
+     <div class="v${r[3]?" bad":""}">${r[1]}</div><div class="n">${r[2]}</div></div>`).join("");
+
+  $("mini").innerHTML = [
+    ["Admitted", S.adm], ["Still in unit", S.ward.length],
+    ["Queue hours", rs(S.qh)], ["Mean occupancy",
+      (S.bedblocks/Math.max(S.t,1)).toFixed(1)],
+  ].map(r=>`<div><span>${r[0]}</span><b>${r[1]}</b></div>`).join("");
+
+  const B = [["ICU beds",S.ward.length,C.beds,0],["Nurses",S.needN,C.nur,1],
+             ["Doctors",S.needD,C.doc,1],["Ventilators",S.vUse,C.vents,0],
+             ["Arterial lines",S.mUse,C.mons,0]];
+  $("bars").innerHTML = B.map(([n,u,c,dp])=>{
+    const f = c>0 ? Math.min(100,100*u/c) : 0;
+    return `<div class="bar"><div class="row"><span>${n}</span>
+      <b>${(+u).toFixed(dp)} / ${c}</b></div><div class="track">
+      <div class="fill ${f>=100?"max":f>85?"hi":""}" style="width:${f}%"></div></div></div>`;
+  }).join("");
+
+  $("occtxt").textContent = (100*S.ward.length/Math.max(C.beds,1)).toFixed(0)+"% occupied";
+  let bg = "";
+  for(let i=0;i<Math.min(C.beds,96);i++){
+    const p = S.ward[i];
+    bg += p
+      ? `<div class="bed on${p.rec.v[Math.min(p.k,p.rec.n-1)]?" v":""}">
+          <span class="id">${p.id}</span>
+          <span class="d">${((p.k+1)/3).toFixed(1)}d</span></div>`
+      : `<div class="bed"><span class="f">free</span></div>`;
+  }
+  $("bedgrid").innerHTML = bg;
+
+  $("qt").innerHTML = S.queue.slice(0,50).map(p=>
+    `<tr><td>${p.id}</td><td class="${p.wait>2?"w":""}">${p.wait*8} h</td>
+     <td>${p.rec.v[0]?"yes":"—"}</td></tr>`).join("");
+  $("qe").style.display = S.queue.length ? "none":"block";
+
+  $("pt").innerHTML = S.ward.slice(0,80).map((p,i)=>{
+    const j = Math.min(p.k,p.rec.n-1);
+    return `<tr><td>${p.id}</td><td>${i+1}</td><td>${p.k}</td>
+      <td>${((p.k+1)/3).toFixed(1)}</td>
+      <td class="${p.unmetV?"w":""}">${p.rec.v[j]?(p.vent?"yes":"UNMET"):"—"}</td>
+      <td>${p.rec.m[j]?(p.mon?"yes":"unmet"):"—"}</td>
+      <td>${(p.rec.c[j]/P.c_bar).toFixed(2)}×</td></tr>`;}).join("");
+  $("pe").style.display = S.ward.length ? "none":"block";
+
+  const ct = S.cost.nurse+S.cost.doctor+S.cost.bed+S.cost.vent;
+  $("ctot").textContent = "₹"+rs(Math.round(ct));
+  $("cpp").textContent  = "₹"+rs(Math.round(ct/done));
+  $("ctab").innerHTML = [["Nursing",S.cost.nurse],["Medical",S.cost.doctor],
+    ["Bed-days",S.cost.bed],["Ventilation",S.cost.vent]]
+    .map(([n,v])=>`<tr><td class="n">${n}</td>
+      <td style="text-align:right">₹${rs(Math.round(v))}</td></tr>`).join("");
+
+  $("log").innerHTML = S.log.map(e=>
+    `<div${e.bad?' class="d"':''}><b>${e.d}d</b>${e.s}</div>`).join("");
+
+  const unlim = C.beds>=200 && C.nur>=200 && C.vents>=200;
+  const mOK = done>150 && Math.abs(mort-7.4)<1.5, lOK = done>150 && Math.abs(ls-3.65)<0.5;
+  $("valid").innerHTML = [
+    ["Mortality", mort.toFixed(1)+"% vs 7.4%", unlim && mOK ? "ok" : "off"],
+    ["Mean stay", ls.toFixed(2)+" d vs 3.65 d", unlim && lOK ? "ok" : "off"],
+    ["Completed stays", done, ""],
+    ["Mode", unlim ? "unconstrained" : "constrained", ""],
+  ].map(r=>`<div class="vrow"><span>${r[0]}</span><b class="${r[2]}">${r[1]}</b></div>`).join("");
+
+  plot("c1",[["occupancy",hist.map(h=>h.occ),"--s1"],["queue",hist.map(h=>h.q),"--s2"]]);
+  plot("c2",[["nurses",hist.map(h=>h.rN*100),"--s1"],["doctors",hist.map(h=>h.rD*100),"--s3"]],100);
+  plot("c3",[["deaths",hist.map(h=>h.dead),"--crit"]]);
+}
+
+function plot(id, series, fixedMax){
+  const cv=$(id), x=cv.getContext("2d"), W=cv.width, H=cv.height, L=38, pad=14;
+  const cs=getComputedStyle(document.body);
+  const col = v => cs.getPropertyValue(v).trim();
+  x.clearRect(0,0,W,H);
+  const max = fixedMax || Math.max(4, ...series.flatMap(s=>s[1]))*1.12;
+  x.strokeStyle=col("--line2"); x.lineWidth=1;
+  for(let i=0;i<=3;i++){const y=pad+(H-pad*2-12)*i/3;
+    x.beginPath();x.moveTo(L,y);x.lineTo(W-4,y);x.stroke();}
+  x.fillStyle=col("--ink3"); x.font="10px ui-monospace,monospace"; x.textAlign="right";
+  x.fillText(Math.round(max),L-7,pad+4); x.fillText("0",L-7,H-pad-8);
+  x.textAlign="left";
+  const n=Math.max(series[0][1].length,2);
+  series.forEach(([,d,c])=>{
+    x.strokeStyle=col(c); x.lineWidth=1.9; x.lineJoin="round"; x.beginPath();
+    d.forEach((v,i)=>{const px=L+(W-L-6)*i/(n-1), py=pad+(H-pad*2-12)*(1-v/max);
+      i?x.lineTo(px,py):x.moveTo(px,py);});
+    x.stroke();});
+  let lx=L+2;
+  series.forEach(([name,,c])=>{
+    x.fillStyle=col(c); x.fillRect(lx,H-8,10,2.5);
+    x.fillStyle=col("--ink3"); x.fillText(name,lx+14,H-4);
+    lx+=x.measureText(name).width+34;});
+}
+
+// ---------------------------------------------------------------- wiring
+$("prov").innerHTML = PROV.map(([a,b,t])=>
+  `<div class="r"><span class="a">${a}</span><span class="b">${b}</span>
+   <span class="tag t-${t}">${t==="m"?"measured":t==="s"?"set":"assumed"}</span></div>`).join("");
+
+$("kappas").innerHTML = [
+  ["staff","Staff shortfall → death / block",0,0.05,0.001],
+  ["queue","Waiting → death / block",0,0.05,0.001],
+  ["vent","Unmet ventilator → death / block",0,0.1,0.002]]
+  .map(([k,l,a,b,s])=>`<div class="bar"><div class="row"><span>${l}</span>
+   <b id="kv_${k}">${K[k]}</b></div>
+   <input type="range" id="kr_${k}" min="${a}" max="${b}" step="${s}" value="${K[k]}"></div>`).join("");
+["staff","queue","vent"].forEach(k=>{
+  $("kr_"+k).oninput = e => { K[k]=+e.target.value; $("kv_"+k).textContent=K[k]; };});
+
+function stop(){ if(timer){clearInterval(timer); timer=null; $("run").textContent="Run";} }
+$("run").onclick = () => {
+  if(timer) return stop();
+  $("run").textContent="Pause";
+  timer = setInterval(()=>{ tick(); render(); }, +$("spd").value);
+};
+$("spd").onchange = () => { if(timer){ stop(); $("run").click(); } };
+$("step").onclick = () => { tick(); render(); };
+$("fwd").onclick  = () => { for(let i=0;i<90;i++) tick(); render(); };
+$("rst").onclick  = () => { stop(); reset(); };
+$("loadbtn").onclick = () => $("file").click();
+$("file").onchange = e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => { try{
+      const raw = JSON.parse(r.result), by = {day:[],eve:[],night:[]};
+      raw.forEach(o => by[o.s].push({s:o.s,d:o.d,c:o.c,o:o.o,l:o.l,v:o.v,m:o.m,n:o.c.length}));
+      COHORT = by; SOURCE = raw.length + " real stays from " + f.name;
+      stop(); reset();
+    }catch(err){ alert("Could not read that file: " + err.message); } };
+  r.readAsText(f);
+};
+reset();
+</script>
